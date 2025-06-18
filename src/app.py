@@ -88,6 +88,42 @@ if alertas:
 else:
     st.info("Nenhum alerta recente disponível.")
 
+# Predição de risco em tempo real com dados dos sensores e RN
+import json
+import numpy as np
+import joblib
+from tensorflow import keras
+
+MODEL_PATH = os.path.join(os.path.dirname(__file__), '../modelo_risco.h5')
+SCALER_PATH = os.path.join(os.path.dirname(__file__), '../scaler_risco.save')
+SENSOR_DATA_PATH = os.path.join(os.path.dirname(__file__), '../dados_sensores.jsonl')
+
+if os.path.exists(MODEL_PATH) and os.path.exists(SCALER_PATH) and os.path.exists(SENSOR_DATA_PATH):
+    try:
+        model = keras.models.load_model(MODEL_PATH)
+        scaler = joblib.load(SCALER_PATH)
+        with open(SENSOR_DATA_PATH, 'r') as f:
+            ultimos = [json.loads(l) for l in f if l.strip()]
+        if ultimos:
+            ultimo = ultimos[-1]
+            X = np.array([[ultimo['chuva'], ultimo['temperatura'], ultimo['umidade']]])
+            X_scaled = scaler.transform(X)
+            prob = model.predict(X_scaled)[0][0]
+            risco = "alto" if prob > 0.5 else "baixo"
+            st.markdown(f"""
+            ### Predição de Risco em Tempo Real
+            - **Chuva:** {ultimo['chuva']} mm
+            - **Temperatura:** {ultimo['temperatura']} °C
+            - **Umidade:** {ultimo['umidade']} %
+            - **Risco previsto:** <span style='color:{'red' if risco=='alto' else 'green'}'><b>{risco.upper()}</b></span> ({prob:.2%})
+            """, unsafe_allow_html=True)
+        else:
+            st.info("Aguardando dados dos sensores para predição de risco.")
+    except Exception as e:
+        st.warning(f"Erro ao carregar modelo de RN ou dados: {e}")
+else:
+    st.info("Modelo de RN ou dados dos sensores não encontrados. Execute o simulador, gere dados e treine o modelo.")
+
 # Exibir estatísticas rápidas
 st.subheader("Estatísticas de Risco 📊")
 st.markdown("""
@@ -107,7 +143,7 @@ else:
 st.subheader("Mapa de Risco e Enchentes 🗺️")
 st.markdown("""
 No mapa abaixo, marcadores <span style='color:red'><b>vermelhos</b></span> indicam municípios com risco ALTO, e círculos <span style='color:blue'><b>azuis</b></span> indicam enchentes detectadas. Passe o mouse sobre os marcadores para detalhes.
-"", unsafe_allow_html=True)
+""", unsafe_allow_html=True)
 mapa = folium.Map(location=[-0.5, -64.5], zoom_start=6)
 
 # Adicionar marcadores de enchentes
