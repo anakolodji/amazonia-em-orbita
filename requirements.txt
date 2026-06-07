@@ -165,6 +165,7 @@ spacy-loggers==1.0.5
 srsly==2.4.8
 stack-data==0.6.3
 streamlit==1.41.0
+streamlit-folium==0.25.0
 tenacity==9.0.0
 tensorboard==2.16.2
 tensorboard-data-server==0.7.2

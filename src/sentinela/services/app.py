@@ -19,7 +19,7 @@ data = pd.DataFrame({
 })
 
 # Título da aplicação
-st.title("🌍 Mapa de Risco de Malária Pós-Enchente - MalariaCast Yanomami")
+st.title("Amazônia em Órbita")
 
 # Filtro de risco
 risco_opcao = st.selectbox("Filtrar por nível de risco:", ["Todos", "Alto", "Médio", "Baixo"])
