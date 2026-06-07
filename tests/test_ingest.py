@@ -9,6 +9,7 @@ import pytest
 
 def setup_test_db():
     # Cria as tabelas no banco de teste
+    Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
 
 def teardown_test_db():

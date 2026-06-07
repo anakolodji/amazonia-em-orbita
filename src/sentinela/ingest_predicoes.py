@@ -10,11 +10,17 @@ def ingest_predicoes(csv_path):
     db = SessionLocal()
     inseridos = 0
     ignorados = 0
+    vistos_no_arquivo = set()
     for _, row in df.iterrows():
         municipio = row['municipio']
         data = datetime.strptime(row['data'], '%Y-%m-%d')
         risco = row['risco']
         score = float(row['score'])
+        chave = (municipio, data, risco)
+        if chave in vistos_no_arquivo:
+            logging.info(f'Predição duplicada ignorada no arquivo: {municipio} - {data.date()} - {risco}')
+            ignorados += 1
+            continue
         exists = db.query(PredicaoRisco).filter_by(municipio=municipio, data=data, risco=risco).first()
         if exists:
             logging.info(f'Predição duplicada ignorada: {municipio} - {data.date()} - {risco}')
@@ -27,6 +33,7 @@ def ingest_predicoes(csv_path):
             score=score
         )
         db.add(pred)
+        vistos_no_arquivo.add(chave)
         inseridos += 1
     db.commit()
     db.close()

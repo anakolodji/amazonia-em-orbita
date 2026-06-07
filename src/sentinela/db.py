@@ -9,7 +9,8 @@ load_dotenv()
 
 Base = declarative_base()
 
-DB_PATH = os.path.join(os.path.dirname(__file__), '../../sentinela_data.db')
+DEFAULT_DB_PATH = os.path.join(os.path.dirname(__file__), '../../sentinela_data.db')
+DB_PATH = os.getenv('SENTINELA_DB_PATH', DEFAULT_DB_PATH)
 DB_URL = f'sqlite:///{DB_PATH}'
 engine = create_engine(DB_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
