@@ -1,0 +1,2 @@
+"""Amazônia em Órbita package."""
+
