@@ -23,6 +23,7 @@
 ## Solução
 
 - Dashboard Streamlit
+- Seletor de visão persistente para Território, Imagem orbital, IPHO e Relatório IA
 - Análise de imagem orbital
 - IPHO - Índice de Prioridade Humanitária Orbital
 - Mapa com pontos de comunidades, marcadores por prioridade e legenda
@@ -56,6 +57,15 @@ Relatório humanitário automatizado
 - Requests para chamada de API LLM compatível com Chat Completions
 - CSV local para dados simulados
 - Casos sanitários simulados normalizados para o cálculo do IPHO
+- Testes automatizados com Pytest
+
+## Códigos Principais
+
+- `src/orbital/image_analysis.py`: processamento de imagem com OpenCV.
+- `src/orbital/priority_index.py`: cálculo do IPHO.
+- `src/orbital/report_generator.py`: prompt e relatório local.
+- `src/orbital/llm_client.py`: chamada de API LLM.
+- `src/orbital/app.py`: dashboard Streamlit.
 
 ## Resultados Esperados
 

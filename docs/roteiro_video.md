@@ -18,4 +18,4 @@ O dashboard cruza a análise orbital com casos sanitários, intensidade de chuva
 
 ## Fechamento
 
-Por fim, a aba Relatório IA chama uma API LLM, quando configurada, para transformar os dados técnicos em resumo da situação, nível de prioridade, justificativa, recomendações e próximos passos para equipes de campo. Se a chave não estiver configurada durante a demonstração, o sistema mantém um fallback local para não interromper o fluxo.
+Por fim, a visão Relatório IA chama uma API LLM, quando configurada, para transformar os dados técnicos em resumo da situação, nível de prioridade, justificativa, recomendações e próximos passos para equipes de campo. Se a chave não estiver configurada durante a demonstração, o sistema mantém um fallback local para não interromper o fluxo.

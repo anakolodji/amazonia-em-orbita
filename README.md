@@ -2,6 +2,14 @@
 
 Sistema inteligente para priorização de áreas vulneráveis usando imagens de satélite, risco ambiental e geração automática de relatórios humanitários.
 
+## Integrantes
+
+Preencher antes da entrega final:
+
+- Nome completo 1 - RM
+- Nome completo 2 - RM
+- Nome completo 3 - RM
+
 ## Visão Geral
 
 O **Amazônia em Órbita** é uma prova de conceito de inteligência espacial aplicada à Amazônia. A plataforma combina imagem orbital, indicadores ambientais, intensidade de chuva, isolamento logístico e casos sanitários simulados para calcular o **IPHO - Índice de Prioridade Humanitária Orbital**.
@@ -14,12 +22,12 @@ Comunidades isoladas da Amazônia enfrentam riscos combinados: enchentes, doenç
 
 ## Solução
 
-O dashboard entrega quatro frentes principais:
+O dashboard entrega quatro visões principais por um seletor persistente:
 
-- **Visão geral territorial:** comunidades monitoradas, IPHO médio, áreas em prioridade alta, gráfico e mapa operacional com legenda.
-- **Análise orbital:** seleção ou upload de imagem, processamento com OpenCV e detecção de água, vegetação e solo exposto.
-- **Priorização humanitária:** cálculo do IPHO com risco ambiental, intensidade de chuva, isolamento logístico, casos sanitários e área afetada pela imagem.
-- **Relatório automatizado com IA Generativa:** chamada opcional a uma API LLM compatível com Chat Completions para gerar resumo, prioridade, justificativa, recomendações e próximos passos. Sem chave configurada, o app usa um fallback local para manter a demonstração funcionando.
+- **Território:** comunidades monitoradas, IPHO médio, áreas em prioridade alta, gráfico e mapa operacional com legenda.
+- **Imagem orbital:** seleção ou upload de imagem, processamento com OpenCV e detecção de água, vegetação e solo exposto.
+- **IPHO:** cálculo do índice com risco ambiental, intensidade de chuva, isolamento logístico, casos sanitários e área afetada pela imagem.
+- **Relatório IA:** chamada opcional a uma API LLM compatível com Chat Completions para gerar resumo, prioridade, justificativa, recomendações e próximos passos. Sem chave configurada, o app usa um fallback local para manter a demonstração funcionando.
 
 ## IPHO
 
@@ -62,6 +70,14 @@ Dashboard Streamlit
 Relatório humanitário automatizado
 ```
 
+## Documentação
+
+- [Documentação da aplicação](docs/documentacao_aplicacao.md): visão completa da solução, arquitetura, módulos, decisões técnicas, limitações e evolução.
+- [Manual operacional](docs/manual_operacional.md): passo a passo para executar, demonstrar e usar o dashboard.
+- [Dicionário de dados](docs/dicionario_dados.md): campos do CSV, variáveis de ambiente, métricas de imagem e cálculo do IPHO.
+- [Roteiro do vídeo](docs/roteiro_video.md): roteiro curto para a gravação demonstrativa.
+- [Estrutura sugerida do PDF](docs/estrutura_pdf.md): organização recomendada para o documento final da GS.
+
 ## Como Executar
 
 Instale as dependências:
@@ -82,6 +98,8 @@ Execute o dashboard:
 streamlit run src/app.py
 ```
 
+A aplicação abre no navegador no endereço exibido pelo Streamlit, normalmente `http://localhost:8501`.
+
 ## IA Generativa com API LLM
 
 Configure um arquivo `.env` na raiz do projeto:
@@ -90,10 +108,30 @@ Configure um arquivo `.env` na raiz do projeto:
 LLM_API_KEY=sua_chave_aqui
 LLM_MODEL=nome_do_modelo
 LLM_API_URL=https://api.openai.com/v1/chat/completions
-LLM_TIMEOUT_SECONDS=25
+LLM_TIMEOUT_SECONDS=60
+LLM_STREAM=false
+LLM_MAX_TOKENS=2048
+LLM_MAX_COMPLETION_RETRIES=1
+LLM_REASONING_EFFORT=
 ```
 
-`LLM_API_URL` aceita endpoints compatíveis com o formato Chat Completions. No dashboard, a aba **Relatório IA** tenta usar a API LLM quando `LLM_API_KEY` e `LLM_MODEL` estão configurados. Se a API estiver indisponível ou sem chave, o sistema gera o relatório local automaticamente.
+`LLM_API_URL` aceita endpoints compatíveis com o formato Chat Completions. No dashboard, a visão **Relatório IA** tenta usar a API LLM quando `LLM_API_KEY` e `LLM_MODEL` estão configurados. Se a API estiver indisponível ou sem chave, o sistema gera o relatório local automaticamente.
+
+Por padrão, `LLM_STREAM=false` força resposta não-streaming. Se algum provedor devolver SSE mesmo assim, o cliente acumula todos os chunks antes de entregar o texto ao dashboard.
+
+Para Google AI Studio/Gemini, use:
+
+```env
+LLM_MODEL=gemini-3.5-flash
+LLM_API_URL=https://generativelanguage.googleapis.com/v1beta/openai/chat/completions
+LLM_TIMEOUT_SECONDS=60
+LLM_MAX_TOKENS=2048
+LLM_REASONING_EFFORT=low
+```
+
+Quando o endpoint é do Google AI Studio e `LLM_REASONING_EFFORT` não foi definido, o cliente usa `low` automaticamente. Isso evita que o orçamento de tokens seja consumido pelo processo de raciocínio do Gemini antes de concluir o texto. Se a API ainda retornar `finish_reason=length`, o cliente pede uma continuação e só entrega o relatório se as seções obrigatórias estiverem presentes.
+
+Também existe um arquivo de exemplo em `.env.example`.
 
 ## Testes
 
