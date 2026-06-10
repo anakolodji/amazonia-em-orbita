@@ -275,4 +275,5 @@ A pasta `src/sentinela/` foi mantida como referência técnica do projeto anteri
 ## Link do Vídeo
 
 Vídeo de apresentação disponível no link abaixo.
+
 **Link do vídeo**: https://youtu.be/x0P39spT4ho?si=qQbJYVNmByXvD0Bn[https://youtu.be/x0P39spT4ho?si=qQbJYVNmByXvD0Bn]
