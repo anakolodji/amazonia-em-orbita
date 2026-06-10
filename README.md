@@ -1,25 +1,20 @@
+# FIAP - Faculdade de Informática e Administração Paulista
+ 
+<p align="center">
+<a href= "https://www.fiap.com.br/"><img src="assets/logo-fiap.png" alt="FIAP - Faculdade de Informática e Admnistração Pa ulista" border="0" width=40% height=40%></a>
+</p>
+ 
+<br>
+ 
+# 🎓 Graduação ON em Inteligência Artificial  
+ 
+----
+
 # Amazônia em Órbita
 
 Sistema inteligente para priorização de áreas vulneráveis usando imagens de satélite, risco ambiental e geração automática de relatórios humanitários.
 
 Projeto desenvolvido para a Global Solution da FIAP, no contexto de economia espacial, inteligência artificial, visão computacional e impacto positivo na Terra.
-
-## Índice
-
-- [Integrantes](#integrantes)
-- [Visão Geral](#visão-geral)
-- [Problema](#problema)
-- [Solução](#solução)
-- [Screenshots da Aplicação](#screenshots-da-aplicação)
-- [IPHO](#ipho)
-- [Arquitetura](#arquitetura)
-- [Funcionalidades](#funcionalidades)
-- [IA Generativa](#ia-generativa)
-- [Como Executar](#como-executar)
-- [Testes](#testes)
-- [Estrutura do Projeto](#estrutura-do-projeto)
-- [Documentação e Entregáveis](#documentação-e-entregáveis)
-- [Evoluções Futuras](#evoluções-futuras)
 
 ## Integrantes
 
