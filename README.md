@@ -272,13 +272,7 @@ tests/
 
 A pasta `src/sentinela/` foi mantida como referência técnica do projeto anterior, com ingestão, banco SQLite, scheduler e modelagem sanitária. A interface principal agora é `src/app.py`, voltada ao produto **Amazônia em Órbita**.
 
-## Evoluções Futuras
+## Link do Vídeo
 
-- Integrar imagens reais de satélite.
-- Conectar APIs meteorológicas e hidrológicas.
-- Adicionar séries temporais por comunidade.
-- Usar modelos de segmentação mais robustos.
-- Integrar banco de dados para histórico de relatórios.
-- Criar alertas automáticos por prioridade alta.
-- Exportar PDF diretamente pelo dashboard.
-- Incorporar RAG com documentos humanitários e protocolos de resposta.
+Vídeo de apresentação disponível no link abaixo.
+**Link do vídeo**: https://youtu.be/x0P39spT4ho?si=qQbJYVNmByXvD0Bn[https://youtu.be/x0P39spT4ho?si=qQbJYVNmByXvD0Bn]
