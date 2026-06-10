@@ -1,0 +1,54 @@
+
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; width: 1440px; height: 900px; font-family: Arial, sans-serif; background: #f5f7f4; color: #17211d; overflow:hidden; }
+  .sidebar { position:absolute; left:0; top:0; width:300px; height:900px; background:#eef2ec; border-right:1px solid #d9ded6; padding:28px 22px; }
+  .sidebar h2 { margin:0 0 6px; font-size:27px; }
+  .sidebar p { margin:0 0 26px; color:#4f5d55; line-height:1.35; }
+  .control { background:#fff; border:1px solid #d9ded6; border-radius:8px; padding:14px; margin:14px 0; }
+  .control small { color:#6f786f; display:block; margin-bottom:6px; }
+  .control strong { color:#146b54; }
+  .main { position:absolute; left:300px; top:0; width:1140px; height:900px; padding:34px 42px; }
+  .header { position:relative; border-bottom:1px solid #d9ded6; padding-bottom:22px; min-height:190px; }
+  .eyebrow { color:#146b54; text-transform:uppercase; font-weight:bold; font-size:14px; }
+  h1 { font-size:56px; margin:8px 0 12px; line-height:.95; }
+  .subtitle { width:760px; color:#4f5d55; font-size:20px; line-height:1.35; }
+  .status { position:absolute; right:0; top:0; width:190px; height:160px; background:#fff; border:1px solid #d9ded6; border-radius:8px; padding:18px; }
+  .badge { display:inline-block; background:#b91c1c; color:#fff; border-radius:999px; padding:6px 12px; font-weight:bold; font-size:14px; }
+  .score { display:block; font-size:42px; font-weight:bold; margin-top:14px; }
+  .nav { margin:24px 0 18px; }
+  .nav span { display:inline-block; background:#fff; border:1px solid #cbd3ca; border-radius:8px; padding:12px 18px; font-weight:bold; margin-right:7px; }
+  .nav span.active { background:#146b54; color:#fff; border-color:#146b54; }
+  .cards { height:132px; margin-bottom:22px; }
+  .card { float:left; width:24%; margin-right:1.333%; background:#fff; border:1px solid #d9ded6; border-top:5px solid #146b54; border-radius:8px; padding:16px; min-height:122px; }
+  .card.last { margin-right:0; }
+  .card.warn { border-top-color:#d97706; } .card.bad { border-top-color:#b91c1c; } .card.blue { border-top-color:#2563eb; }
+  .card small { color:#56635b; display:block; } .card strong { display:block; font-size:30px; margin:10px 0; }
+  .panel { background:#fff; border:1px solid #d9ded6; border-radius:8px; padding:18px; }
+  .map-panel { position:absolute; left:42px; top:520px; width:660px; height:330px; }
+  .chart-panel { position:absolute; left:722px; top:520px; width:376px; height:330px; }
+  .panel h2 { margin:0 0 14px; font-size:23px; }
+  .map { height:226px; background:linear-gradient(135deg,#d8eadb,#edf5e9); border-radius:8px; position:relative; overflow:hidden; }
+  .river { position:absolute; width:800px; height:62px; background:#6ea7d8; transform:rotate(-17deg); left:-100px; top:100px; opacity:.9; }
+  .marker { position:absolute; border-radius:50%; width:34px; height:34px; background:#b91c1c; border:4px solid #fff; box-shadow:0 4px 12px #0002; }
+  .m1 { left:210px; top:95px; } .m2 { left:385px; top:160px; background:#d97706; } .m3 { left:520px; top:72px; background:#146b54; }
+  .bars div { margin:18px 0; }
+  .label { display:block; margin-bottom:6px; color:#4f5d55; } .label b:last-child { float:right; }
+  .track { height:18px; background:#edf1eb; border-radius:99px; overflow:hidden; }
+  .fill { height:100%; background:#146b54; } .fill.warn { background:#d97706; } .fill.bad { background:#b91c1c; }
+  .legend { margin-top:12px; color:#4f5d55; }
+  .dot { display:inline-block; width:12px; height:12px; border-radius:50%; margin-right:6px; background:#b91c1c; }
+</style>
+</head>
+<body>
+<div class="sidebar"><h2>Amazônia em Órbita</h2><p>Monitoramento orbital para priorização humanitária.</p><div class="control"><small>Imagem orbital</small><strong>Amostra Surucucu</strong></div><div class="control"><small>Cena vinculada</small><strong>Surucucu</strong><small>28,7% de área afetada na imagem atual</small></div><div class="control"><small>Filtro de prioridade</small><strong>Alta · Média · Baixa</strong></div></div>
+<div class="main"><section class="header"><span class="eyebrow">Inteligência espacial aplicada à Amazônia</span><h1>Amazônia em Órbita</h1><div class="subtitle">Sistema de apoio à decisão para priorizar comunidades vulneráveis a partir de imagem orbital, chuva, isolamento e casos sanitários.</div><div class="status"><span class="badge">Alta</span><span class="score">77,8</span><small>IPHO da cena selecionada</small></div></section>
+<nav class="nav"><span class="active">Território</span><span>Imagem orbital</span><span>IPHO</span><span>Relatório IA</span></nav>
+<section class="cards"><div class="card blue"><small>Comunidades monitoradas</small><strong>6</strong><small>6.410 pessoas</small></div><div class="card warn"><small>IPHO médio</small><strong>64,0</strong><small>escala 0-100</small></div><div class="card bad"><small>Prioridade alta</small><strong>3</strong><small>áreas críticas</small></div><div class="card last"><small>Última análise</small><strong>06/06/2026</strong><small>ciclo orbital</small></div></section>
+<div class="panel map-panel"><h2>Mapa operacional</h2><div class="map"><div class="river"></div><span class="marker m1"></span><span class="marker m2"></span><span class="marker m3"></span></div><div class="legend"><span><i class="dot"></i>Alta</span> &nbsp; <span><i class="dot" style="background:#d97706"></i>Média</span> &nbsp; <span><i class="dot" style="background:#146b54"></i>Baixa</span></div></div>
+<div class="panel chart-panel"><h2>Distribuição IPHO</h2><div class="bars"><div><span class="label"><b>Alta</b><b>3</b></span><div class="track"><div class="fill bad" style="width:75%"></div></div></div><div><span class="label"><b>Média</b><b>3</b></span><div class="track"><div class="fill warn" style="width:75%"></div></div></div><div><span class="label"><b>Baixa</b><b>0</b></span><div class="track"><div class="fill" style="width:5%"></div></div></div></div></div>
+</div></body></html>
