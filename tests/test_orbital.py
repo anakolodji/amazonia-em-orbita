@@ -1,7 +1,19 @@
+from datetime import date
+from urllib.parse import parse_qs, urlparse
+
+import cv2
 import numpy as np
 
 from orbital.image_analysis import analyze_image_array
 from orbital.llm_client import LLMAPIError, LLMClient, LLMConfig
+from orbital.mission_agents import build_agent_decisions
+from orbital.ml_risk_model import blend_ipho_with_ml, predict_ml_risk_score
+from orbital.nasa_gibs import (
+    GIBS_LAYER_OPTIONS,
+    GIBS_REGION_OPTIONS,
+    build_gibs_wms_url,
+    fetch_gibs_scene,
+)
 from orbital.priority_index import (
     PriorityInputs,
     apply_priority_index,
@@ -9,11 +21,14 @@ from orbital.priority_index import (
     classify_priority,
     sanitary_cases_to_score,
 )
+from orbital.rag import retrieve_humanitarian_context
 from orbital.report_generator import (
     REQUIRED_REPORT_SECTIONS,
     build_llm_messages,
     generate_humanitarian_report,
 )
+from orbital.sensor_stream import load_sensor_readings, summarize_sensor_risk
+from orbital.yolo_detector import detect_orbital_objects
 from orbital.app import _build_map
 
 
@@ -57,6 +72,24 @@ def test_apply_priority_index_orders_highest_priority_first():
 
     assert result.iloc[0]["community"] == "Surucucu"
     assert result.iloc[0]["priority"] == "Alta"
+    assert result.iloc[0]["priority_validated"] == "Alta"
+    assert result.iloc[0]["ml_risk_score"] > 50
+    assert result.iloc[0]["IPHO_validated"] > 70
+
+
+def test_predictive_model_blends_with_explainable_ipho():
+    ml_score = predict_ml_risk_score(
+        {
+            "environmental_risk": 82,
+            "sanitary_case_score": 82.5,
+            "logistic_isolation": 90,
+            "rainfall_intensity": 78,
+            "orbital_area_affected": 66,
+        }
+    )
+
+    assert ml_score > 70
+    assert blend_ipho_with_ml(81.5, ml_score) > 78
 
 
 def test_analyze_image_array_detects_water_and_vegetation():
@@ -69,6 +102,65 @@ def test_analyze_image_array_detects_water_and_vegetation():
     assert analysis.water_percent > 40
     assert analysis.vegetation_percent > 40
     assert analysis.affected_area_percent > 40
+    assert analysis.segmentation_confidence > 80
+    assert "k-means" in analysis.analysis_method
+
+
+def test_yolo_ready_detector_returns_contour_detections():
+    image = np.zeros((120, 120, 3), dtype=np.uint8)
+    image[:60, :] = (190, 90, 20)
+    image[60:, :] = (45, 130, 45)
+    analysis = analyze_image_array(image)
+
+    detections = detect_orbital_objects(analysis)
+    labels = {detection.label for detection in detections}
+
+    assert "água superficial" in labels
+    assert "vegetação densa" in labels
+    assert all(detection.model.startswith("YOLO-ready") for detection in detections)
+
+
+def test_rag_retrieves_humanitarian_protocol_context():
+    snippets = retrieve_humanitarian_context(
+        "prioridade alta chuva isolamento casos sanitarios água segura liderança local",
+        top_k=2,
+    )
+
+    assert snippets
+    assert any("Prioridade alta" in snippet.text for snippet in snippets)
+
+
+def test_build_gibs_wms_url_uses_nasa_parameters():
+    url = build_gibs_wms_url(
+        layer=GIBS_LAYER_OPTIONS["MODIS Terra True Color"],
+        image_date=date(2025, 6, 1),
+        bbox=GIBS_REGION_OPTIONS["Yanomami / Roraima"].bbox,
+    )
+    params = parse_qs(urlparse(url).query)
+
+    assert "gibs.earthdata.nasa.gov" in url
+    assert params["SERVICE"] == ["WMS"]
+    assert params["REQUEST"] == ["GetMap"]
+    assert params["LAYERS"] == ["MODIS_Terra_CorrectedReflectance_TrueColor"]
+    assert params["TIME"] == ["2025-06-01"]
+
+
+def test_fetch_gibs_scene_decodes_image_with_fake_http():
+    image = np.zeros((12, 12, 3), dtype=np.uint8)
+    image[:, :] = (190, 90, 20)
+    success, encoded = cv2.imencode(".jpg", image)
+    assert success
+
+    scene = fetch_gibs_scene(
+        layer=GIBS_LAYER_OPTIONS["MODIS Terra True Color"],
+        region=GIBS_REGION_OPTIONS["Yanomami / Roraima"],
+        image_date=date(2025, 6, 1),
+        http_client=FakeGetHTTPClient(encoded.tobytes()),
+    )
+
+    assert scene.image_bgr.shape[:2] == (12, 12)
+    assert "MODIS Terra True Color" in scene.label
+    assert "gibs.earthdata.nasa.gov" in scene.source_url
 
 
 def test_generate_humanitarian_report_contains_priority_context():
@@ -94,6 +186,7 @@ def test_generate_humanitarian_report_contains_priority_context():
     assert "Próximos passos" in report
     assert "IPHO 81.5/100" in report
     assert "132 casos sanitários" in report
+    assert "Contexto RAG recuperado" in report
 
 
 def test_build_llm_messages_contains_required_context():
@@ -118,6 +211,7 @@ def test_build_llm_messages_contains_required_context():
     assert "Resumo da situação" in prompt
     assert "Casos sanitários simulados: 132" in prompt
     assert "Área afetada por imagem orbital: 66.0%" in prompt
+    assert "Contexto RAG local recuperado" in prompt
 
 
 def test_llm_client_calls_chat_completions_payload():
@@ -306,6 +400,64 @@ def test_map_includes_priority_legend():
     assert "Baixa" in html
 
 
+def test_sensor_stream_loads_realtime_jsonl(tmp_path):
+    sensor_file = tmp_path / "sensores.jsonl"
+    sensor_file.write_text(
+        "\n".join(
+            [
+                '{"temperatura": 26.5, "umidade": 78.0, "chuva": 64.0, "timestamp": "2026-06-16T12:00:00"}',
+                '{"temperatura": 31.0, "umidade": 40.0, "chuva": 10.0, "timestamp": "2026-06-16T12:00:05"}',
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    readings = load_sensor_readings(sensor_file)
+    summary = summarize_sensor_risk(readings)
+
+    assert len(readings) == 2
+    assert readings.iloc[0]["risk_label"] in {"Alto", "Médio", "Baixo"}
+    assert summary.total_readings == 2
+    assert summary.latest_score >= 0
+
+
+def test_agent_orchestration_contains_space_ai_and_edge_layers():
+    prioritized = apply_priority_index(
+        [
+            {
+                "community": "Surucucu",
+                "latitude": 2.8333,
+                "longitude": -63.6667,
+                "environmental_risk": 82,
+                "rainfall_intensity": 78,
+                "logistic_isolation": 90,
+                "sanitary_cases": 132,
+                "orbital_area_affected": 66,
+            }
+        ]
+    )
+
+    decisions = build_agent_decisions(
+        prioritized,
+        {
+            "water_percent": 19.1,
+            "vegetation_percent": 71.9,
+            "exposed_soil_percent": 8.9,
+            "affected_area_percent": 28.7,
+            "environmental_risk": 82.0,
+            "segmentation_confidence": 99.0,
+        },
+        llm_configured=True,
+        nasa_source_enabled=True,
+    )
+    agents = {decision.agent for decision in decisions}
+
+    assert "Agente orbital" in agents
+    assert "Agente preditivo ML" in agents
+    assert "Agente IoT/sensores" in agents
+    assert "Agente cloud/distribuído" in agents
+
+
 class FakeHTTPClient:
     def __init__(
         self,
@@ -366,3 +518,25 @@ class FakeResponse:
                 yield line
             else:
                 yield line.encode("utf-8")
+
+
+class FakeGetHTTPClient:
+    def __init__(self, content: bytes):
+        self.content = content
+        self.last_url = None
+        self.last_timeout = None
+
+    def get(self, url, timeout):
+        self.last_url = url
+        self.last_timeout = timeout
+        return FakeGetResponse(self.content)
+
+
+class FakeGetResponse:
+    headers = {"content-type": "image/jpeg"}
+
+    def __init__(self, content: bytes):
+        self.content = content
+
+    def raise_for_status(self):
+        return None

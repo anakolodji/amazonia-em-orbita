@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Mapping
 
 from orbital.priority_index import sanitary_cases_to_score
+from orbital.rag import build_humanitarian_query, format_rag_snippets, retrieve_humanitarian_context
 
 REQUIRED_REPORT_SECTIONS = (
     "Resumo da situação",
@@ -25,6 +26,8 @@ def generate_humanitarian_report(
     }.get(context["priority"], "no próximo ciclo de monitoramento")
     recommendations = _recommendations(context["priority"])
     next_steps = _next_steps(context["priority"])
+    rag_snippets = retrieve_humanitarian_context(build_humanitarian_query(context))
+    rag_context = format_rag_snippets(rag_snippets)
 
     return (
         f"Relatório humanitário automatizado - {context['name']}\n\n"
@@ -37,7 +40,10 @@ def generate_humanitarian_report(
         "Justificativa:\n"
         f"A classificação combina risco ambiental ({context['environmental']:.1f}), intensidade de chuva "
         f"({context['rainfall']:.1f}), isolamento logístico ({context['isolation']:.1f}), risco sanitário derivado dos "
-        f"casos ({context['sanitary']:.1f}) e área afetada por imagem orbital ({context['affected']:.1f}%).\n\n"
+        f"casos ({context['sanitary']:.1f}) e área afetada por imagem orbital ({context['affected']:.1f}%). "
+        f"Como validação complementar, o modelo preditivo estimou risco {context['ml_risk']:.1f}/100 "
+        f"e IPHO validado {context['ipho_validated']:.1f}/100.\n"
+        f"Contexto RAG recuperado:\n{rag_context}\n\n"
         "Recomendações:\n"
         f"A resposta deve ser planejada {action_window}. {recommendations}\n\n"
         "Próximos passos:\n"
@@ -53,11 +59,13 @@ def build_report_context(
     territory = str(community.get("territory", "Amazônia Legal"))
     priority = str(community["priority"])
     ipho = float(community["IPHO"])
+    ipho_validated = float(community.get("IPHO_validated", ipho))
     environmental = float(community["environmental_risk"])
     rainfall = float(community["rainfall_intensity"])
     isolation = float(community["logistic_isolation"])
     sanitary_cases = float(community["sanitary_cases"])
     sanitary = float(community.get("sanitary_case_score", sanitary_cases_to_score(sanitary_cases)))
+    ml_risk = float(community.get("ml_risk_score", ipho_validated))
     affected = float(community["orbital_area_affected"])
 
     if image_metrics:
@@ -69,6 +77,8 @@ def build_report_context(
         "territory": territory,
         "priority": priority,
         "ipho": ipho,
+        "ipho_validated": ipho_validated,
+        "ml_risk": ml_risk,
         "environmental": environmental,
         "rainfall": rainfall,
         "isolation": isolation,
@@ -84,6 +94,8 @@ def build_llm_messages(
 ) -> list[dict[str, str]]:
     context = build_report_context(community, image_metrics)
     sections = "\n".join(f"- {section}" for section in REQUIRED_REPORT_SECTIONS)
+    rag_snippets = retrieve_humanitarian_context(build_humanitarian_query(context))
+    rag_context = format_rag_snippets(rag_snippets)
     return [
         {
             "role": "system",
@@ -104,14 +116,18 @@ def build_llm_messages(
                 f"- Território: {context['territory']}\n"
                 f"- Prioridade: {context['priority']}\n"
                 f"- IPHO: {context['ipho']:.1f}/100\n"
+                f"- IPHO validado por ML: {context['ipho_validated']:.1f}/100\n"
+                f"- Risco preditivo ML: {context['ml_risk']:.1f}/100\n"
                 f"- Risco ambiental: {context['environmental']:.1f}/100\n"
                 f"- Intensidade de chuva: {context['rainfall']:.1f}/100\n"
                 f"- Isolamento logístico: {context['isolation']:.1f}/100\n"
                 f"- Casos sanitários simulados: {context['sanitary_cases']:.0f}\n"
                 f"- Risco sanitário normalizado: {context['sanitary']:.1f}/100\n"
                 f"- Área afetada por imagem orbital: {context['affected']:.1f}%\n\n"
+                "Contexto RAG local recuperado:\n"
+                f"{rag_context}\n\n"
                 "Regras: seja objetivo, explique a justificativa do IPHO, cite recomendações "
-                "práticas e conclua com próximos passos verificáveis."
+                "práticas, use o contexto RAG sem inventar fontes e conclua com próximos passos verificáveis."
             ),
         },
     ]

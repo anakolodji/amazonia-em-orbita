@@ -5,6 +5,8 @@ from typing import Iterable, Mapping
 
 import pandas as pd
 
+from orbital.ml_risk_model import blend_ipho_with_ml, predict_ml_risk_score
+
 
 IPHO_WEIGHTS = {
     "environmental_risk": 0.30,
@@ -71,7 +73,10 @@ def apply_priority_index(records: pd.DataFrame | Iterable[Mapping[str, object]])
     df = records.copy() if isinstance(records, pd.DataFrame) else pd.DataFrame(records)
     if df.empty:
         df["IPHO"] = []
+        df["ml_risk_score"] = []
+        df["IPHO_validated"] = []
         df["priority"] = []
+        df["priority_validated"] = []
         return df
 
     df["IPHO"] = df.apply(
@@ -79,8 +84,14 @@ def apply_priority_index(records: pd.DataFrame | Iterable[Mapping[str, object]])
         axis=1,
     )
     df["sanitary_case_score"] = df.apply(_sanitary_score_from_mapping, axis=1)
+    df["ml_risk_score"] = df.apply(_ml_risk_score_from_mapping, axis=1)
+    df["IPHO_validated"] = df.apply(
+        lambda row: blend_ipho_with_ml(row["IPHO"], row["ml_risk_score"]),
+        axis=1,
+    )
     df["priority"] = df["IPHO"].map(classify_priority)
-    return df.sort_values("IPHO", ascending=False).reset_index(drop=True)
+    df["priority_validated"] = df["IPHO_validated"].map(classify_priority)
+    return df.sort_values("IPHO_validated", ascending=False).reset_index(drop=True)
 
 
 def _mapping_value(inputs: Mapping[str, float], preferred: str, fallback: str) -> float:
@@ -93,3 +104,17 @@ def _sanitary_score_from_mapping(inputs: Mapping[str, float]) -> float:
     if "sanitary_cases" in inputs:
         return sanitary_cases_to_score(inputs["sanitary_cases"])
     return clamp_score(inputs["sanitary_risk"])
+
+
+def _ml_risk_score_from_mapping(inputs: Mapping[str, float]) -> float:
+    return predict_ml_risk_score(
+        {
+            "environmental_risk": clamp_score(inputs["environmental_risk"]),
+            "sanitary_case_score": _sanitary_score_from_mapping(inputs),
+            "logistic_isolation": clamp_score(inputs["logistic_isolation"]),
+            "rainfall_intensity": clamp_score(
+                _mapping_value(inputs, "rainfall_intensity", "climate_intensity")
+            ),
+            "orbital_area_affected": clamp_score(inputs["orbital_area_affected"]),
+        }
+    )

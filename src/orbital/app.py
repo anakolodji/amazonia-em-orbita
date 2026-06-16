@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import time
+from datetime import date, timedelta
 from pathlib import Path
 
 import cv2
@@ -11,18 +13,27 @@ from streamlit_folium import st_folium
 
 from orbital.image_analysis import analyze_image_array, load_image_from_bytes, load_image_from_file
 from orbital.llm_client import LLMAPIError, LLMClient
+from orbital.mission_agents import build_agent_decisions, decisions_to_frame
+from orbital.nasa_gibs import (
+    GIBSImageError,
+    GIBS_LAYER_OPTIONS,
+    GIBS_REGION_OPTIONS,
+    fetch_gibs_scene,
+)
 from orbital.priority_index import apply_priority_index
 from orbital.report_generator import (
     REQUIRED_REPORT_SECTIONS,
     build_llm_messages,
     generate_humanitarian_report,
 )
+from orbital.sensor_stream import load_sensor_readings, summarize_sensor_risk
+from orbital.yolo_detector import detect_orbital_objects, detections_to_records
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 COMMUNITIES_PATH = PROJECT_ROOT / "data" / "communities_orbital.csv"
 SAMPLE_IMAGE_DIR = PROJECT_ROOT / "data" / "sample_images"
-VIEW_OPTIONS = ("Território", "Imagem orbital", "IPHO", "Relatório IA")
+VIEW_OPTIONS = ("Território", "Imagem orbital", "IPHO", "Orquestração", "Tempo real", "Relatório IA")
 PRIORITY_ORDER = ["Alta", "Média", "Baixa"]
 PRIORITY_COLORS = {
     "Alta": "#b91c1c",
@@ -36,7 +47,7 @@ def main() -> None:
     _inject_styles()
 
     communities = _load_communities()
-    image_bgr, image_label = _image_source_controls()
+    image_bgr, image_label, image_metadata = _image_source_controls()
     analysis = analyze_image_array(image_bgr)
 
     linked_community = st.sidebar.selectbox(
@@ -53,7 +64,7 @@ def main() -> None:
         ["Alta", "Média", "Baixa"],
         default=["Alta", "Média", "Baixa"],
     )
-    visible = prioritized[prioritized["priority"].isin(priority_filter)]
+    visible = prioritized[prioritized["priority_validated"].isin(priority_filter)]
 
     _render_sidebar_summary(prioritized, linked_community, analysis)
     _render_page_header(prioritized, linked_community)
@@ -62,9 +73,13 @@ def main() -> None:
     if active_view == "Território":
         _render_overview(visible, prioritized)
     elif active_view == "Imagem orbital":
-        _render_image_analysis(image_bgr, image_label, linked_community, analysis)
+        _render_image_analysis(image_bgr, image_label, linked_community, analysis, image_metadata)
     elif active_view == "IPHO":
         _render_priority_table(visible)
+    elif active_view == "Orquestração":
+        _render_agent_orchestration(prioritized, analysis, image_metadata)
+    elif active_view == "Tempo real":
+        _render_realtime_sensor_stream()
     else:
         _render_report(prioritized, linked_community, analysis)
 
@@ -90,11 +105,48 @@ def _image_source_controls() -> tuple:
     st.sidebar.subheader("Imagem orbital")
     sample_images = sorted(SAMPLE_IMAGE_DIR.glob("*.png")) + sorted(SAMPLE_IMAGE_DIR.glob("*.jpg"))
 
-    source = st.sidebar.radio("Origem da imagem", ["Amostra", "Upload"], horizontal=True)
+    source = st.sidebar.radio("Origem da imagem", ["Amostra", "Upload", "NASA GIBS"])
     if source == "Upload":
         uploaded = st.sidebar.file_uploader("Imagem orbital", type=["png", "jpg", "jpeg"])
         if uploaded is not None:
-            return load_image_from_bytes(uploaded.getvalue()), uploaded.name
+            return load_image_from_bytes(uploaded.getvalue()), uploaded.name, {
+                "source": "Upload",
+                "nasa_source_enabled": False,
+            }
+
+    if source == "NASA GIBS":
+        layer_label = st.sidebar.selectbox("Camada NASA", list(GIBS_LAYER_OPTIONS.keys()))
+        region_label = st.sidebar.selectbox("Recorte orbital", list(GIBS_REGION_OPTIONS.keys()))
+        default_date = date.today() - timedelta(days=7)
+        image_date = st.sidebar.date_input(
+            "Data da cena",
+            value=default_date,
+            max_value=date.today(),
+        )
+        if st.sidebar.button("Carregar cena NASA GIBS", use_container_width=True):
+            try:
+                image_bgr, label, source_url, acknowledgement = _fetch_gibs_scene_cached(
+                    layer_label,
+                    region_label,
+                    image_date.isoformat(),
+                )
+                st.session_state["orbital_gibs_scene"] = {
+                    "image_bgr": image_bgr,
+                    "label": label,
+                    "source_url": source_url,
+                    "acknowledgement": acknowledgement,
+                }
+            except GIBSImageError as exc:
+                st.sidebar.warning(f"Não foi possível carregar NASA GIBS. Usando amostra local. Detalhe: {exc}")
+
+        cached_scene = st.session_state.get("orbital_gibs_scene")
+        if cached_scene:
+            return cached_scene["image_bgr"], cached_scene["label"], {
+                "source": "NASA GIBS",
+                "nasa_source_enabled": True,
+                "source_url": cached_scene["source_url"],
+                "acknowledgement": cached_scene["acknowledgement"],
+            }
 
     if not sample_images:
         st.error("Nenhuma imagem orbital de amostra foi encontrada.")
@@ -105,7 +157,20 @@ def _image_source_controls() -> tuple:
         sample_images,
         format_func=lambda path: path.stem.replace("_", " ").title(),
     )
-    return load_image_from_file(selected), selected.name
+    return load_image_from_file(selected), selected.name, {
+        "source": "Amostra local",
+        "nasa_source_enabled": False,
+    }
+
+
+@st.cache_data(show_spinner=False, ttl=3600)
+def _fetch_gibs_scene_cached(layer_label: str, region_label: str, image_date_iso: str) -> tuple:
+    scene = fetch_gibs_scene(
+        layer=GIBS_LAYER_OPTIONS[layer_label],
+        region=GIBS_REGION_OPTIONS[region_label],
+        image_date=date.fromisoformat(image_date_iso),
+    )
+    return scene.image_bgr, scene.label, scene.source_url, scene.acknowledgement
 
 
 def _render_sidebar_summary(prioritized: pd.DataFrame, linked_community: str, analysis) -> None:
@@ -120,7 +185,7 @@ def _render_sidebar_summary(prioritized: pd.DataFrame, linked_community: str, an
         f"""
         <div class="sidebar-summary">
             <strong>{linked_community}</strong>
-            <span>IPHO {row['IPHO']:.1f} · {row['priority']}</span>
+            <span>IPHO validado {row['IPHO_validated']:.1f} · {row['priority_validated']}</span>
             <small>{analysis.affected_area_percent:.1f}% de área afetada na imagem atual</small>
         </div>
         """,
@@ -140,8 +205,8 @@ def _apply_image_to_community(communities: pd.DataFrame, community: str, analysi
 
 def _render_page_header(prioritized: pd.DataFrame, linked_community: str) -> None:
     selected = prioritized[prioritized["community"] == linked_community]
-    priority = selected.iloc[0]["priority"] if not selected.empty else "Média"
-    ipho = selected.iloc[0]["IPHO"] if not selected.empty else prioritized["IPHO"].mean()
+    priority = selected.iloc[0].get("priority_validated", selected.iloc[0]["priority"]) if not selected.empty else "Média"
+    ipho = selected.iloc[0].get("IPHO_validated", selected.iloc[0]["IPHO"]) if not selected.empty else prioritized["IPHO_validated"].mean()
     badge_class = f"priority-badge priority-{_priority_slug(priority)}"
 
     st.markdown(
@@ -155,7 +220,7 @@ def _render_page_header(prioritized: pd.DataFrame, linked_community: str) -> Non
             <div class="header-status">
                 <span class="{badge_class}">{priority}</span>
                 <strong>{ipho:.1f}</strong>
-                <small>IPHO da cena selecionada</small>
+                <small>IPHO validado da cena selecionada</small>
             </div>
         </section>
         """,
@@ -181,8 +246,8 @@ def _render_view_navigation() -> str:
 
 
 def _render_overview(visible: pd.DataFrame, prioritized: pd.DataFrame) -> None:
-    high_priority = int((prioritized["priority"] == "Alta").sum())
-    avg_ipho = prioritized["IPHO"].mean()
+    high_priority = int((prioritized["priority_validated"] == "Alta").sum())
+    avg_ipho = prioritized["IPHO_validated"].mean()
     monitored_people = int(prioritized["monitored_population"].sum())
     last_contact = pd.to_datetime(prioritized["last_contact"]).max().strftime("%d/%m/%Y")
     top = prioritized.iloc[0]
@@ -203,7 +268,7 @@ def _render_overview(visible: pd.DataFrame, prioritized: pd.DataFrame) -> None:
     with chart_col:
         st.subheader("Distribuição IPHO")
         distribution = (
-            prioritized["priority"]
+            prioritized["priority_validated"]
             .value_counts()
             .reindex(PRIORITY_ORDER, fill_value=0)
             .rename_axis("Prioridade")
@@ -211,18 +276,23 @@ def _render_overview(visible: pd.DataFrame, prioritized: pd.DataFrame) -> None:
         )
         st.altair_chart(_priority_chart(distribution), use_container_width=True)
         st.dataframe(
-            prioritized[["community", "IPHO", "priority"]].rename(
-                columns={"community": "Comunidade", "priority": "Prioridade"}
+            prioritized[["community", "IPHO", "IPHO_validated", "priority_validated"]].rename(
+                columns={
+                    "community": "Comunidade",
+                    "IPHO_validated": "IPHO validado",
+                    "priority_validated": "Prioridade",
+                }
             ),
             hide_index=True,
             use_container_width=True,
             column_config={
                 "IPHO": st.column_config.ProgressColumn("IPHO", min_value=0, max_value=100, format="%.1f"),
+                "IPHO validado": st.column_config.ProgressColumn("IPHO validado", min_value=0, max_value=100, format="%.1f"),
             },
         )
 
 
-def _render_image_analysis(image_bgr, image_label: str, linked_community: str, analysis) -> None:
+def _render_image_analysis(image_bgr, image_label: str, linked_community: str, analysis, image_metadata: dict) -> None:
     st.subheader(f"Cena orbital vinculada a {linked_community}")
 
     image_cols = st.columns(2)
@@ -231,12 +301,17 @@ def _render_image_analysis(image_bgr, image_label: str, linked_community: str, a
     with image_cols[1]:
         st.image(analysis.processed_image_rgb, caption="Processamento: água, vegetação e solo exposto")
 
-    metric_cols = st.columns(5)
+    metric_cols = st.columns(6)
     _metric_card(metric_cols[0], "Água detectada", f"{analysis.water_percent:.1f}%", "máscara orbital", "blue")
     _metric_card(metric_cols[1], "Vegetação", f"{analysis.vegetation_percent:.1f}%", "cobertura estimada", "ok")
     _metric_card(metric_cols[2], "Solo exposto", f"{analysis.exposed_soil_percent:.1f}%", "alteração visual", "warning")
     _metric_card(metric_cols[3], "Área afetada", f"{analysis.affected_area_percent:.1f}%", "entrada do IPHO", _score_tone(analysis.affected_area_percent))
     _metric_card(metric_cols[4], "Risco ambiental", f"{analysis.environmental_risk:.1f}", "escala 0-100", _score_tone(analysis.environmental_risk))
+    _metric_card(metric_cols[5], "Confiança CV", f"{analysis.segmentation_confidence:.1f}", analysis.analysis_method, "neutral")
+
+    if image_metadata.get("source_url"):
+        st.caption(f"Fonte: {image_metadata['source_url']}")
+        st.caption(str(image_metadata.get("acknowledgement", "")))
 
     st.markdown(
         """
@@ -248,6 +323,25 @@ def _render_image_analysis(image_bgr, image_label: str, linked_community: str, a
         """,
         unsafe_allow_html=True,
     )
+
+    detections = detect_orbital_objects(analysis)
+    st.subheader("Detecção orbital YOLO-ready")
+    if detections:
+        st.dataframe(
+            detections_to_records(detections),
+            hide_index=True,
+            use_container_width=True,
+            column_config={
+                "Confiança": st.column_config.ProgressColumn(
+                    "Confiança",
+                    min_value=0,
+                    max_value=1,
+                    format="%.2f",
+                ),
+            },
+        )
+    else:
+        st.info("Nenhum objeto orbital relevante foi detectado pelo fallback YOLO-ready.")
 
     encoded = _encode_png(analysis.processed_image_rgb)
     st.download_button(
@@ -269,8 +363,11 @@ def _render_priority_table(visible: pd.DataFrame) -> None:
             "sanitary_cases",
             "sanitary_case_score",
             "orbital_area_affected",
+            "ml_risk_score",
             "IPHO",
+            "IPHO_validated",
             "priority",
+            "priority_validated",
         ]
     ].rename(
         columns={
@@ -281,7 +378,10 @@ def _render_priority_table(visible: pd.DataFrame) -> None:
             "sanitary_cases": "Casos sanitários",
             "sanitary_case_score": "Risco sanitário",
             "orbital_area_affected": "Área afetada",
+            "ml_risk_score": "Risco ML",
+            "IPHO_validated": "IPHO validado",
             "priority": "Prioridade",
+            "priority_validated": "Prioridade validada",
         }
     )
     st.dataframe(
@@ -294,10 +394,79 @@ def _render_priority_table(visible: pd.DataFrame) -> None:
             "Isolamento": st.column_config.ProgressColumn("Isolamento", min_value=0, max_value=100, format="%.1f"),
             "Risco sanitário": st.column_config.ProgressColumn("Risco sanitário", min_value=0, max_value=100, format="%.1f"),
             "Área afetada": st.column_config.ProgressColumn("Área afetada", min_value=0, max_value=100, format="%.1f"),
+            "Risco ML": st.column_config.ProgressColumn("Risco ML", min_value=0, max_value=100, format="%.1f"),
             "IPHO": st.column_config.ProgressColumn("IPHO", min_value=0, max_value=100, format="%.1f"),
+            "IPHO validado": st.column_config.ProgressColumn("IPHO validado", min_value=0, max_value=100, format="%.1f"),
             "Casos sanitários": st.column_config.NumberColumn("Casos sanitários", format="%d"),
         },
     )
+
+
+def _render_agent_orchestration(prioritized: pd.DataFrame, analysis, image_metadata: dict) -> None:
+    st.subheader("Orquestração multiagente")
+    decisions = build_agent_decisions(
+        prioritized,
+        analysis.as_dict(),
+        llm_configured=LLMClient().is_configured,
+        nasa_source_enabled=bool(image_metadata.get("nasa_source_enabled")),
+    )
+    st.dataframe(
+        decisions_to_frame(decisions),
+        hide_index=True,
+        use_container_width=True,
+    )
+
+
+def _render_realtime_sensor_stream() -> None:
+    st.subheader("Fluxo de sensores em tempo real")
+    auto_refresh = st.toggle("Atualização automática", value=False)
+    refresh_seconds = st.slider("Intervalo de atualização", 3, 30, 5)
+
+    df = load_sensor_readings(limit=160)
+    summary = summarize_sensor_risk(df)
+
+    metric_cols = st.columns(5)
+    _metric_card(metric_cols[0], "Leituras", summary.total_readings, "janela recente", "blue")
+    _metric_card(metric_cols[1], "Risco atual", summary.latest_risk, f"{summary.latest_score:.1f}/100", _sensor_tone(summary.latest_score))
+    _metric_card(metric_cols[2], "Alertas altos", summary.high_risk_readings, "na janela", "critical" if summary.high_risk_readings else "ok")
+
+    if not df.empty:
+        latest = df.iloc[-1]
+        _metric_card(metric_cols[3], "Temperatura", f"{latest['temperatura']:.1f}°C", "última leitura", "neutral")
+        _metric_card(metric_cols[4], "Chuva", f"{latest['chuva']:.1f} mm", "última leitura", _score_tone(min(100, latest["chuva"])))
+
+        chart_data = df[["timestamp", "temperatura", "umidade", "chuva", "risk_score"]].melt(
+            "timestamp",
+            var_name="Métrica",
+            value_name="Valor",
+        )
+        st.altair_chart(
+            alt.Chart(chart_data)
+            .mark_line(point=False)
+            .encode(
+                x=alt.X("timestamp:T", title=None),
+                y=alt.Y("Valor:Q", title=None),
+                color=alt.Color("Métrica:N", title=None),
+                tooltip=["timestamp:T", "Métrica:N", "Valor:Q"],
+            )
+            .properties(height=310),
+            use_container_width=True,
+        )
+        st.dataframe(
+            df.tail(12).sort_values("timestamp", ascending=False),
+            hide_index=True,
+            use_container_width=True,
+        )
+    else:
+        st.info("Nenhuma leitura encontrada em dados_sensores.jsonl. Execute o simulador para alimentar o fluxo.")
+
+    if st.button("Atualizar agora", use_container_width=True):
+        st.rerun()
+
+    if auto_refresh:
+        st.caption(f"Atualizando novamente em {refresh_seconds} segundos.")
+        time.sleep(refresh_seconds)
+        st.rerun()
 
 
 def _render_report(prioritized: pd.DataFrame, linked_community: str, analysis) -> None:
@@ -326,6 +495,7 @@ def _render_report(prioritized: pd.DataFrame, linked_community: str, analysis) -
         )
 
         row = prioritized[prioritized["community"] == selected].iloc[0].to_dict()
+        row["priority"] = row.get("priority_validated", row["priority"])
 
         if st.button("Gerar relatório humanitário", type="primary", use_container_width=True):
             fallback_report = generate_humanitarian_report(row, analysis.as_dict())
@@ -382,18 +552,20 @@ def _build_map(df: pd.DataFrame) -> folium.Map:
     ).add_to(map_object)
 
     for _, row in df.iterrows():
-        color = _priority_color(row["priority"])
+        color = _priority_color(row["priority_validated"])
         popup = (
             f"<strong>{row['community']}</strong><br>"
             f"IPHO: {row['IPHO']:.1f}<br>"
-            f"Prioridade: {row['priority']}<br>"
+            f"IPHO validado: {row['IPHO_validated']:.1f}<br>"
+            f"Prioridade: {row['priority_validated']}<br>"
+            f"Risco ML: {row['ml_risk_score']:.1f}/100<br>"
             f"Chuva: {row['rainfall_intensity']:.1f}/100<br>"
             f"Casos sanitários: {int(row['sanitary_cases'])}<br>"
             f"Área afetada: {row['orbital_area_affected']:.1f}%"
         )
         folium.CircleMarker(
             location=[row["latitude"], row["longitude"]],
-            radius=7 + row["IPHO"] / 16,
+            radius=7 + row["IPHO_validated"] / 16,
             color=color,
             fill=True,
             fill_color=color,
@@ -422,14 +594,22 @@ def _score_tone(score: float) -> str:
     return "ok"
 
 
+def _sensor_tone(score: float) -> str:
+    if score >= 70:
+        return "critical"
+    if score >= 45:
+        return "warning"
+    return "ok"
+
+
 def _insight_strip(top: pd.Series) -> None:
     st.markdown(
         f"""
         <div class="insight-strip">
-            <span class="priority-dot priority-dot-{_priority_slug(top['priority'])}"></span>
+            <span class="priority-dot priority-dot-{_priority_slug(top['priority_validated'])}"></span>
             <div>
                 <strong>{top['community']} lidera a fila operacional</strong>
-                <small>IPHO {top['IPHO']:.1f} · {top['priority']} · {int(top['sanitary_cases'])} casos sanitários · {top['rainfall_intensity']:.1f}/100 chuva</small>
+                <small>IPHO validado {top['IPHO_validated']:.1f} · {top['priority_validated']} · {int(top['sanitary_cases'])} casos sanitários · {top['rainfall_intensity']:.1f}/100 chuva</small>
             </div>
         </div>
         """,
