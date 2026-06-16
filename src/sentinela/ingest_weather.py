@@ -22,15 +22,20 @@ REGIONS = [
 BASE_URL = "http://api.weatherapi.com/v1/alerts.json"
 
 def fetch_weather_alerts(region):
+    if not API_KEY:
+        logging.warning("WEATHER_API_KEY não configurada; ingestão climática ignorada.")
+        return None
+
     params = {
         "key": API_KEY,
         "q": f"{region['lat']},{region['lon']}"
     }
-    response = requests.get(BASE_URL, params=params)
-    if response.status_code == 200:
+    try:
+        response = requests.get(BASE_URL, params=params, timeout=20)
+        response.raise_for_status()
         return response.json()
-    else:
-        print(f"Erro ao buscar alertas: {response.status_code}")
+    except requests.RequestException as exc:
+        logging.error(f"Erro ao buscar alertas para {region['name']}: {exc}")
         return None
 
 def save_alerts_to_db(alerts, region_name, db: Session):
@@ -69,16 +74,17 @@ def save_alerts_to_db(alerts, region_name, db: Session):
         db.add(db_alert)
         logging.info(f'Alerta salvo: {region_name} - {data_emissao}')
     db.commit()
-    db.commit()
 
 
 def ingest_weather_alerts():
     db = SessionLocal()
-    for region in REGIONS:
-        alerts = fetch_weather_alerts(region)
-        if alerts:
-            save_alerts_to_db(alerts, region['name'], db)
-    db.close()
+    try:
+        for region in REGIONS:
+            alerts = fetch_weather_alerts(region)
+            if alerts:
+                save_alerts_to_db(alerts, region['name'], db)
+    finally:
+        db.close()
 
 if __name__ == "__main__":
     setup_logging()
