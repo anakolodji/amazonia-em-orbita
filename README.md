@@ -1,68 +1,69 @@
 # FIAP - Faculdade de Informática e Administração Paulista
- 
+
 <p align="center">
-<a href= "https://www.fiap.com.br/"><img src="assets/logo-fiap.png" alt="FIAP - Faculdade de Informática e Admnistração Pa ulista" border="0" width=40% height=40%></a>
+<a href="https://www.fiap.com.br/"><img src="assets/logo-fiap.png" alt="FIAP - Faculdade de Informática e Administração Paulista" border="0" width="40%" height="40%"></a>
 </p>
- 
+
 <br>
- 
-# 🎓 Graduação ON em Inteligência Artificial  
- 
+
+# Graduação ON em Inteligência Artificial
+
 ----
 
 # Amazônia em Órbita
 
-Sistema inteligente para priorização de áreas vulneráveis usando imagens de satélite, risco ambiental e geração automática de relatórios humanitários.
-
-Projeto desenvolvido para a Global Solution da FIAP, no contexto de economia espacial, inteligência artificial, visão computacional e impacto positivo na Terra.
+## Grupo Amazônia em Órbita
 
 ## Integrantes
 
-- Ana Ingrid Pires Alves Kolodji
-- Fábio Santos Cardôso
-- Bruno Henrique Nielsen Conter
-- Matheus Conciani da Silva
+- Ana Ingrid Pires Alves Kolodji - RM 559629
+- Fábio Santos Cardôso - RM a preencher no PDF final
+- Bruno Henrique Nielsen Conter - RM a preencher no PDF final
+- Matheus Conciani da Silva - RM a preencher no PDF final
 
-## Visão Geral
+## Professores
 
-O **Amazônia em Órbita** é uma prova de conceito de inteligência espacial aplicada à Amazônia. A plataforma combina imagem orbital, indicadores ambientais, risco sanitário, isolamento logístico e intensidade climática para calcular o **IPHO - Índice de Prioridade Humanitária Orbital**.
+### Tutor(a)
 
-A proposta transforma dados orbitais e IA em inteligência operacional para apoiar decisões humanitárias em regiões remotas. A interface principal é um dashboard Streamlit com mapa, cards, análise de imagem, tabela de priorização e relatório humanitário automatizado.
+- A preencher
 
-## Problema
+### Coordenador(a)
 
-Comunidades isoladas da Amazônia enfrentam riscos combinados: enchentes, doenças, dificuldade logística, variação climática e baixa disponibilidade de dados operacionais. Equipes humanitárias precisam decidir onde agir primeiro, mas muitas vezes dependem de dados dispersos, baixa visibilidade territorial e relatórios manuais.
+- A preencher
 
-O problema central tratado pela aplicação é:
+## Descrição
+
+O **Amazônia em Órbita** é uma prova de conceito desenvolvida para a Global Solution da FIAP, no contexto de economia espacial, Inteligência Artificial, visão computacional, automação e impacto positivo na Terra.
+
+A pergunta central respondida pelo projeto é:
 
 ```text
-Como transformar dados orbitais, indicadores ambientais e IA em inteligência operacional para priorização humanitária?
+Como tecnologias avançadas de Inteligência Artificial e computação podem impulsionar a nova economia espacial e gerar impacto positivo na Terra?
 ```
 
-## Solução
+A solução propõe uma plataforma Streamlit para apoiar decisões humanitárias em comunidades remotas da Amazônia. O sistema combina imagens orbitais, inclusive fonte online NASA GIBS quando há rede, indicadores ambientais, isolamento logístico, chuva, casos sanitários simulados e leitura de sensores para calcular o **IPHO - Índice de Prioridade Humanitária Orbital**.
 
-O dashboard entrega quatro visões principais por um seletor persistente:
+O MVP entrega seis visões principais:
 
-- **Território:** comunidades monitoradas, IPHO médio, áreas em prioridade alta, mapa operacional, gráfico e tabela resumida.
-- **Imagem orbital:** seleção ou upload de imagem, processamento com OpenCV e detecção de água, vegetação e solo exposto.
-- **IPHO:** cálculo do índice com indicadores normalizados, barras de progresso e classificação baixa, média ou alta.
-- **Relatório IA:** geração de relatório humanitário com resumo, prioridade, justificativa, recomendações e próximos passos.
+- **Território:** mapa operacional, cards, gráfico de distribuição de prioridade e tabela resumida.
+- **Imagem orbital:** seleção de amostra, upload ou cena NASA GIBS, processamento com OpenCV, HSV, k-means e detector YOLO-ready por contornos.
+- **IPHO:** cálculo do índice explicável, score preditivo ML, IPHO validado e classificação baixa, média ou alta.
+- **Orquestração:** visão multiagente com camadas orbital, visão computacional, IPHO, ML, IA Generativa, IoT/sensores e cloud.
+- **Tempo real:** fluxo de sensores a partir de `dados_sensores.jsonl`, com risco calculado por temperatura, umidade e chuva.
+- **Relatório IA:** geração de relatório humanitário com RAG local, API LLM compatível com Chat Completions ou fallback local.
 
-A navegação usa estado persistente para manter o usuário na mesma visão mesmo depois de ações que causam rerun, como gerar relatório com API LLM.
+### Principais componentes técnicos
 
-## Screenshots da Aplicação
+- Visão computacional com OpenCV para detectar água, vegetação, solo exposto e área afetada.
+- Integração opcional com NASA GIBS/WMS para uso de fonte orbital real.
+- Detector YOLO-ready documentado, com saída de classe, confiança e caixa delimitadora.
+- IPHO explicável com validação complementar por score preditivo ML.
+- RAG local com documentos humanitários em `docs/rag_corpus/`.
+- Cliente de IA Generativa com fallback local para garantir demonstração sem chave de API.
+- Simulador/API de sensores substituível por ESP32.
+- Dashboard inteligente com mapas, gráficos, tabelas e fluxo em tempo real.
 
-| Território | Imagem orbital |
-|---|---|
-| <img src="screenshots/territorio.png" alt="Visão Território do dashboard" width="100%"> | <img src="screenshots/imagem_orbital.png" alt="Visão Imagem orbital com processamento OpenCV" width="100%"> |
-
-| IPHO | Relatório IA |
-|---|---|
-| <img src="screenshots/ipho.png" alt="Visão IPHO com tabela de priorização" width="100%"> | <img src="screenshots/relatorio_ia.png" alt="Visão Relatório IA com relatório humanitário automatizado" width="100%"> |
-
-## IPHO
-
-O IPHO combina cinco dimensões em escala de 0 a 100:
+### IPHO
 
 ```text
 IPHO =
@@ -73,85 +74,117 @@ IPHO =
 (0.10 x área afetada por imagem orbital)
 ```
 
-Classificação:
-
 | IPHO | Prioridade |
 |---:|---|
 | 0 a 39 | Baixa |
 | 40 a 69 | Média |
 | 70 a 100 | Alta |
 
-Os casos sanitários simulados são convertidos para escala de 0 a 100 antes de entrar no índice:
+### Arquitetura resumida
 
 ```text
-risco_sanitario = min(100, sanitary_cases / 160 x 100)
-```
-
-## Arquitetura
-
-```text
-Imagem orbital / upload
+Imagem orbital / upload / NASA GIBS
           ↓
-OpenCV: máscaras de água, vegetação e solo exposto
+OpenCV: HSV + k-means para água, vegetação e solo exposto
+          ↓
+Detector YOLO-ready por contornos OpenCV
           ↓
 Métricas visuais: área afetada e risco ambiental
           ↓
-CSV de comunidades: chuva, isolamento, casos e coordenadas
+CSV de comunidades + fluxo de sensores
           ↓
-Cálculo do IPHO
+Cálculo do IPHO + score preditivo ML
           ↓
-Dashboard Streamlit
+Dashboard Streamlit + orquestração multiagente
           ↓
-API LLM ou fallback local
+RAG local + API LLM ou fallback local
           ↓
 Relatório humanitário automatizado
 ```
 
-## Funcionalidades
+## Estrutura de pastas
 
-### Dashboard Streamlit
+Dentre os arquivos e pastas presentes na raiz do projeto, definem-se:
 
-- Cabeçalho operacional com status da cena selecionada.
-- Sidebar para seleção de imagem, upload, comunidade vinculada e filtro de prioridade.
-- Cards de indicadores principais.
-- Mapa com comunidades e marcadores coloridos por prioridade.
-- Gráfico de distribuição por prioridade.
-- Tabela IPHO com barras de progresso.
-- Download de imagem processada e relatório.
+- `assets/`: imagens institucionais usadas no README.
+- `data/`: bases utilizadas pelo MVP, incluindo `communities_orbital.csv` e imagens orbitais de amostra.
+- `docs/`: documentação textual, checklist do enunciado, dicionário de dados, manual operacional, estrutura sugerida do PDF, corpus RAG, diagramas, prints e relatório final.
+- `screenshots/`: imagens da interface para documentação e apresentação.
+- `src/`: código-fonte da aplicação, incluindo dashboard Streamlit, análise orbital, cálculo IPHO, RAG, detector YOLO-ready, sensores, ingestões e módulos complementares.
+- `tests/`: testes automatizados com Pytest.
+- `README.md`: guia geral do projeto.
+- `requirements.txt`: dependências Python necessárias para execução.
+- `.env.example`: exemplo de configuração de variáveis de ambiente.
 
-### Análise de Imagem Orbital
+Estrutura principal:
 
-O módulo de imagem usa OpenCV para:
+```text
+src/
+  app.py
+  orbital/
+    app.py
+    image_analysis.py
+    llm_client.py
+    mission_agents.py
+    ml_risk_model.py
+    nasa_gibs.py
+    priority_index.py
+    rag.py
+    report_generator.py
+    sample_assets.py
+    sensor_stream.py
+    yolo_detector.py
+  sentinela/
+    api_sensores.py
+    simulador_sensores.py
+    treina_modelo_rn.py
+data/
+  communities_orbital.csv
+  sample_images/
+docs/
+  rag_corpus/
+screenshots/
+tests/
+```
 
-- carregar imagem por arquivo ou upload;
-- converter a imagem para HSV;
-- aplicar máscaras de cor para água, vegetação e solo exposto;
-- limpar ruídos com operações morfológicas;
-- calcular percentuais por máscara;
-- gerar imagem processada com sobreposição visual.
+## Links e Observações
 
-Na cena de amostra, o processamento identifica aproximadamente:
+- Repositório do projeto: https://github.com/anakolodji/amazonia-em-orbita
+- Vídeo da entrega: https://youtu.be/x0P39spT4ho?si=qQbJYVNmByXvD0Bn
+- Documentação da aplicação: [docs/documentacao_aplicacao.md](docs/documentacao_aplicacao.md)
+- Manual operacional: [docs/manual_operacional.md](docs/manual_operacional.md)
+- Dicionário de dados: [docs/dicionario_dados.md](docs/dicionario_dados.md)
+- Estrutura sugerida do PDF: [docs/estrutura_pdf.md](docs/estrutura_pdf.md)
+- Relatório final em PDF: [docs/amazonia_em_orbita_relatorio_final.pdf](docs/amazonia_em_orbita_relatorio_final.pdf)
 
-- 19,1% de água;
-- 71,9% de vegetação;
-- 8,9% de solo exposto;
-- 28,7% de área afetada.
+### Observações técnicas
 
-### Relatório Humanitário
+- A aplicação funciona sem chave de API LLM, usando fallback local para o relatório.
+- A integração NASA GIBS depende de rede e disponibilidade do serviço externo, mas a demonstração mantém amostra local e upload como fallback.
+- O detector YOLO-ready é um placeholder funcional por contornos OpenCV, preparado para substituição futura por pesos YOLO treinados.
+- O fluxo de sensores em tempo real lê `dados_sensores.jsonl`, que pode ser alimentado pelo simulador Python ou por um ESP32 enviando JSON para a API Flask.
+- Os RMs e nomes de professores devem ser conferidos e preenchidos no PDF final antes da entrega.
 
-O relatório gerado segue esta estrutura:
+## Como executar o código
 
-- Resumo da situação.
-- Nível de prioridade.
-- Justificativa.
-- Recomendações.
-- Próximos passos.
+### Pré-requisitos
 
-## IA Generativa
+- Python 3.10 ou superior. Recomendado: Python 3.12.
+- Pip atualizado.
+- Navegador atualizado para acessar o dashboard Streamlit.
+- Opcional: chave de API LLM compatível com Chat Completions.
 
-O cliente LLM fica em `src/orbital/llm_client.py` e usa por padrão uma API compatível com Chat Completions. A aplicação funciona mesmo sem chave, pois possui fallback local.
+### Instalação
 
-Crie um arquivo `.env` na raiz do projeto:
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+### Configuração opcional da IA Generativa
+
+Copie `.env.example` para `.env` e preencha quando quiser usar a API LLM:
 
 ```env
 LLM_API_KEY=sua_chave_aqui
@@ -164,39 +197,9 @@ LLM_MAX_COMPLETION_RETRIES=1
 LLM_REASONING_EFFORT=
 ```
 
-Para Google AI Studio/Gemini:
+Sem essas variáveis, o app continua funcionando com relatório local.
 
-```env
-LLM_MODEL=gemini-3.5-flash
-LLM_API_URL=https://generativelanguage.googleapis.com/v1beta/openai/chat/completions
-LLM_TIMEOUT_SECONDS=60
-LLM_MAX_TOKENS=2048
-LLM_REASONING_EFFORT=low
-```
-
-Detalhes importantes do cliente:
-
-- `LLM_STREAM=false` é o padrão recomendado para demonstração.
-- Se o provedor devolver stream, o cliente acumula todos os chunks antes de renderizar o relatório.
-- Se a API sinalizar `finish_reason=length`, o cliente solicita continuação automaticamente.
-- O relatório só é entregue à interface quando contém as seções obrigatórias.
-- Para endpoint do Google AI Studio, `reasoning_effort=low` é aplicado automaticamente quando a variável não está definida.
-
-## Como Executar
-
-Instale as dependências:
-
-```bash
-pip install -r requirements.txt
-```
-
-Gere novamente a imagem orbital de amostra, se necessário:
-
-```bash
-python3 src/orbital/sample_assets.py
-```
-
-Execute o dashboard:
+### Executar o dashboard
 
 ```bash
 streamlit run src/app.py
@@ -208,72 +211,46 @@ A aplicação normalmente abre em:
 http://localhost:8501
 ```
 
-## Testes
+### Gerar imagem orbital de amostra
 
-Execute:
+```bash
+python3 src/orbital/sample_assets.py
+```
+
+### Fluxo opcional de sensores
+
+Em um terminal, execute a API:
+
+```bash
+python3 src/sentinela/api_sensores.py
+```
+
+Em outro terminal, execute o simulador:
+
+```bash
+python3 src/sentinela/simulador_sensores.py
+```
+
+As leituras serão gravadas em `dados_sensores.jsonl` e aparecerão na visão **Tempo real** do dashboard.
+
+### Testes
 
 ```bash
 python3 -m pytest
 ```
 
-Os testes cobrem:
+Os testes cobrem cálculo do IPHO, visão computacional, NASA GIBS com HTTP falso, detector YOLO-ready, RAG, sensores em tempo real, orquestração multiagente, prompt/cliente LLM e mapa.
 
-- cálculo do IPHO;
-- normalização de casos sanitários;
-- ordenação por prioridade;
-- análise simples de imagem orbital;
-- geração de relatório local;
-- prompt para LLM;
-- cliente de API LLM com HTTP falso;
-- stream e respostas truncadas;
-- legenda do mapa.
+## Histórico de lançamentos
 
-## Estrutura do Projeto
+- 0.5.0 - Inclusão de RAG local, detector YOLO-ready, visão Tempo real e documentação alinhada ao enunciado.
+- 0.4.0 - Inclusão de NASA GIBS, k-means, IPHO validado por ML e orquestração multiagente.
+- 0.3.0 - Ajustes no cliente LLM, fallback local e validação de seções obrigatórias do relatório.
+- 0.2.0 - Implementação do dashboard Streamlit com mapa, IPHO, análise orbital e relatório IA.
+- 0.1.0 - Estrutura inicial do projeto, dados simulados, módulos de sensores e ingestão.
 
-```text
-src/
-  app.py
-  orbital/
-    app.py
-    image_analysis.py
-    llm_client.py
-    priority_index.py
-    report_generator.py
-    sample_assets.py
-data/
-  communities_orbital.csv
-  sample_images/
-docs/
-screenshots/
-tests/
-```
+----
 
-### Códigos Principais
+## Licença
 
-| Arquivo | Responsabilidade |
-|---|---|
-| `src/app.py` | Entrada do Streamlit e chamada de `orbital.app.main()`. |
-| `src/orbital/app.py` | Interface Streamlit, mapa, cards, tabelas, navegação e acionamento do relatório. |
-| `src/orbital/image_analysis.py` | Processamento de imagem com OpenCV e extração das métricas orbitais. |
-| `src/orbital/priority_index.py` | Cálculo do IPHO, normalização sanitária e classificação de prioridade. |
-| `src/orbital/report_generator.py` | Relatório local, contexto quantitativo e prompt da API LLM. |
-| `src/orbital/llm_client.py` | Cliente HTTP para API LLM compatível com Chat Completions. |
-| `tests/test_orbital.py` | Testes principais da solução orbital. |
-
-## Documentação e Entregáveis
-
-- [Documentação da aplicação](docs/documentacao_aplicacao.md)
-- [Manual operacional](docs/manual_operacional.md)
-- [Dicionário de dados](docs/dicionario_dados.md)
-- [Estrutura sugerida do PDF](docs/estrutura_pdf.md)
-- [Relatório final em PDF](<docs/amazonia_em_orbita_relatorio_final (2).pdf>)
-
-## Módulos Legados
-
-A pasta `src/sentinela/` foi mantida como referência técnica do projeto anterior, com ingestão, banco SQLite, scheduler e modelagem sanitária. A interface principal agora é `src/app.py`, voltada ao produto **Amazônia em Órbita**.
-
-## Link do Vídeo
-
-Vídeo de apresentação disponível no link abaixo.
-
-**Link do vídeo**: https://youtu.be/x0P39spT4ho?si=qQbJYVNmByXvD0Bn[https://youtu.be/x0P39spT4ho?si=qQbJYVNmByXvD0Bn]
+Este projeto acadêmico é destinado à avaliação da Global Solution e às atividades da Graduação ON em Inteligência Artificial da FIAP.

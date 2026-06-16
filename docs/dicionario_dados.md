@@ -36,6 +36,7 @@ O módulo `src/orbital/image_analysis.py` retorna:
 | `exposed_soil_percent` | Percentual da imagem classificado como solo exposto. |
 | `affected_area_percent` | Métrica composta usada no IPHO como área afetada. |
 | `environmental_risk` | Risco ambiental derivado da leitura visual. |
+| `segmentation_confidence` | Percentual de pixels classificados por HSV + k-means. |
 | `processed_image_rgb` | Imagem RGB com sobreposição das máscaras. |
 | `mask_image_rgb` | Imagem RGB contendo apenas as máscaras. |
 
@@ -68,7 +69,45 @@ IPHO =
 | 40 a 69 | Média |
 | 70 a 100 | Alta |
 
-## 6. Variáveis de Ambiente
+## 6. Validação Preditiva
+
+O módulo `src/orbital/ml_risk_model.py` gera:
+
+| Campo | Descrição |
+|---|---|
+| `ml_risk_score` | Risco preditivo complementar em escala 0-100. |
+| `IPHO_validated` | Mistura de 75% do IPHO explicável e 25% do risco ML. |
+| `priority_validated` | Classificação baseada no `IPHO_validated`. |
+
+## 7. RAG e Detecções
+
+| Campo | Descrição |
+|---|---|
+| `RAGSnippet.title` | Título do documento local recuperado. |
+| `RAGSnippet.source` | Arquivo em `docs/rag_corpus/`. |
+| `RAGSnippet.text` | Trecho usado como contexto do relatório. |
+| `Classe` | Classe do detector YOLO-ready. |
+| `Confiança` | Confiança estimada do fallback por contornos. |
+| `x`, `y`, `largura`, `altura` | Caixa delimitadora compatível com detectores do tipo YOLO. |
+
+## 8. Fluxo de Sensores
+
+Arquivo:
+
+```text
+dados_sensores.jsonl
+```
+
+| Campo | Descrição |
+|---|---|
+| `timestamp` | Momento da leitura. |
+| `temperatura` | Temperatura enviada pelo simulador ou ESP32. |
+| `umidade` | Umidade relativa. |
+| `chuva` | Chuva acumulada/simulada. |
+| `risk_score` | Score calculado pelo dashboard em escala 0-100. |
+| `risk_label` | Baixo, Médio ou Alto. |
+
+## 9. Variáveis de Ambiente
 
 Arquivo recomendado:
 
@@ -88,9 +127,10 @@ Variáveis:
 | `LLM_MAX_TOKENS` | Não | Orçamento máximo de saída da resposta LLM. Padrão: `2048`. |
 | `LLM_MAX_COMPLETION_RETRIES` | Não | Quantidade de continuações automáticas quando a API retorna texto incompleto. Padrão: `1`. |
 | `LLM_REASONING_EFFORT` | Não | Esforço de raciocínio em APIs compatíveis. Para Google AI Studio, o cliente usa `low` por padrão. |
+| `WEATHER_API_KEY` | Não | Chave da WeatherAPI usada apenas pela ingestão climática complementar em `src/sentinela/ingest_weather.py`. |
 | `SENTINELA_DB_PATH` | Não | Caminho alternativo do SQLite legado, usado principalmente em testes. |
 
-## 7. Saída do Relatório
+## 10. Saída do Relatório
 
 O relatório humanitário segue as seções:
 
@@ -100,4 +140,4 @@ O relatório humanitário segue as seções:
 - Recomendações.
 - Próximos passos.
 
-Quando a API LLM está configurada, essas seções são solicitadas no prompt e validadas antes de aparecerem na interface. Se a API devolver stream, o cliente acumula todos os chunks. Se a resposta vier marcada como incompleta por limite de tokens, o cliente solicita uma continuação antes de renderizar o relatório. Quando a API não está configurada, o fallback local gera a mesma estrutura.
+Quando a API LLM está configurada, essas seções são solicitadas no prompt junto com o contexto RAG recuperado e validadas antes de aparecerem na interface. Se a API devolver stream, o cliente acumula todos os chunks. Se a resposta vier marcada como incompleta por limite de tokens, o cliente solicita uma continuação antes de renderizar o relatório. Quando a API não está configurada, o fallback local gera a mesma estrutura com os trechos locais recuperados.
