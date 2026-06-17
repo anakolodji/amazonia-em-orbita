@@ -12,24 +12,20 @@
 
 # Amazônia em Órbita
 
-## Grupo Amazônia em Órbita
-
 ## Integrantes
 
 - Ana Ingrid Pires Alves Kolodji - RM 559629
-- Fábio Santos Cardôso - RM a preencher no PDF final
-- Bruno Henrique Nielsen Conter - RM a preencher no PDF final
-- Matheus Conciani da Silva - RM a preencher no PDF final
+
 
 ## Professores
 
-### Tutor(a)
+### Tutor
 
-- A preencher
+- Leonardo Ruiz Orabona
 
 ### Coordenador(a)
 
-- A preencher
+- Andre Godoi
 
 ## Descrição
 
@@ -62,6 +58,21 @@ O MVP entrega seis visões principais:
 - Cliente de IA Generativa com fallback local para garantir demonstração sem chave de API.
 - Simulador/API de sensores substituível por ESP32.
 - Dashboard inteligente com mapas, gráficos, tabelas e fluxo em tempo real.
+
+### Cobertura técnica da solução
+
+| Tecnologia / conceito | Como aparece no projeto |
+|---|---|
+| IA Generativa | `src/orbital/llm_client.py` integra API LLM compatível com Chat Completions e `src/orbital/report_generator.py` gera o relatório humanitário com fallback local. |
+| RAG simples com documentos humanitários | `src/orbital/rag.py` recupera contexto em `docs/rag_corpus/` antes de montar o relatório. |
+| Visão computacional | `src/orbital/image_analysis.py` usa OpenCV, HSV, k-means e máscaras para água, vegetação, solo exposto e área afetada. |
+| Classificador YOLO/placeholder para detecção orbital | `src/orbital/yolo_detector.py` implementa um detector YOLO-ready documentado, com fallback por contornos OpenCV, classe, confiança e caixa delimitadora. |
+| Dashboard inteligente | `src/orbital/app.py` entrega interface Streamlit com mapas, cards, gráficos, tabelas, relatórios e fluxo em tempo real. |
+| APIs espaciais | `src/orbital/nasa_gibs.py` integra NASA GIBS/WMS para carregar cenas orbitais reais quando há rede. |
+| Geolocalização | `data/communities_orbital.csv` contém latitude/longitude das comunidades, usadas no mapa Folium do dashboard. |
+| Machine Learning leve | `src/orbital/ml_risk_model.py` gera score preditivo complementar e IPHO validado. |
+| Sensores simulados | `src/sentinela/api_sensores.py`, `src/sentinela/simulador_sensores.py` e `src/orbital/sensor_stream.py` conectam leituras ambientais ao dashboard. |
+| Sistemas multiagentes | `src/orbital/mission_agents.py` organiza agentes orbital, visão computacional, IPHO, ML, IA Generativa, IoT/sensores e cloud. |
 
 ### IPHO
 
@@ -154,16 +165,14 @@ tests/
 - Documentação da aplicação: [docs/documentacao_aplicacao.md](docs/documentacao_aplicacao.md)
 - Manual operacional: [docs/manual_operacional.md](docs/manual_operacional.md)
 - Dicionário de dados: [docs/dicionario_dados.md](docs/dicionario_dados.md)
-- Estrutura sugerida do PDF: [docs/estrutura_pdf.md](docs/estrutura_pdf.md)
 - Relatório final em PDF: [docs/amazonia_em_orbita_relatorio_final.pdf](docs/amazonia_em_orbita_relatorio_final.pdf)
 
 ### Observações técnicas
 
-- A aplicação funciona sem chave de API LLM, usando fallback local para o relatório.
+- A aplicação tambem funciona sem chave de API LLM, usando fallback local para o relatório.
 - A integração NASA GIBS depende de rede e disponibilidade do serviço externo, mas a demonstração mantém amostra local e upload como fallback.
 - O detector YOLO-ready é um placeholder funcional por contornos OpenCV, preparado para substituição futura por pesos YOLO treinados.
 - O fluxo de sensores em tempo real lê `dados_sensores.jsonl`, que pode ser alimentado pelo simulador Python ou por um ESP32 enviando JSON para a API Flask.
-- Os RMs e nomes de professores devem ser conferidos e preenchidos no PDF final antes da entrega.
 
 ## Como executar o código
 
